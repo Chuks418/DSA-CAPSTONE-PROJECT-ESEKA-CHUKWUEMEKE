@@ -15,15 +15,11 @@ Every time you give an AI tool a significant prompt, add an entry. Three lines e
 - **What was wrong (or "nothing"):** The first attempt to replace the booking test section accidentally removed the file's imports and setup. This caused a `ReferenceError`. The complete test file was restored and corrected. The final test run passed all 46 tests with no failures.
 ## Build 2
 
-### Prompt 1: Build 2 prompt (docs/build-2.md)
-- **What I asked:**
-- **What came back:**
-- **What was wrong (or "nothing"):**
+### Prompt 1: Build 2 implementation (docs/build-2.md)
+- **What I asked:** Implement and test the Build 2 requirements, including event searching, filtering, sorting, and publishing or unpublishing events.
+- **What came back:** The implementation included event searching, filtering, sorting, and publishing. I added the missing unpublish operation and expanded the tests to cover the acceptance criteria and edge cases.
+- **What was wrong (or "nothing"):** The initial S04 test assertions were placed outside their test block, causing a ReferenceError. The test file was corrected. Further review also improved date validation and test coverage. The final test run passed all 59 tests with no failures.
 
-### Prompt 2:
-- **What I asked:**
-- **What came back:**
-- **What was wrong (or "nothing"):**
 
 ## Build 3
 

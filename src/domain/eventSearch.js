@@ -20,11 +20,31 @@ export function summarizeEvent(event, tiers) {
 }
 
 function parseDate(value, field, { endOfDay = false } = {}) {
-  const time = new Date(value).getTime();
-  if (Number.isNaN(time)) throw new DomainError('VALIDATION', `${field} must be a valid date`);
-  // "2026-12-05" as an upper bound should include the whole of the 5th.
   const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(String(value));
-  return endOfDay && isDateOnly ? time + 24 * 60 * 60 * 1000 - 1 : time;
+
+  if (isDateOnly) {
+    const [year, month, day] = value.split('-').map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day));
+
+    if (
+      date.getUTCFullYear() !== year ||
+      date.getUTCMonth() !== month - 1 ||
+      date.getUTCDate() !== day
+    ) {
+      throw new DomainError('VALIDATION', `${field} must be a valid date`);
+    }
+
+    const time = date.getTime();
+    return endOfDay ? time + 24 * 60 * 60 * 1000 - 1 : time;
+  }
+
+  const time = new Date(value).getTime();
+
+  if (Number.isNaN(time)) {
+    throw new DomainError('VALIDATION', `${field} must be a valid date`);
+  }
+
+  return time;
 }
 
 export function filterEvents(summaries, { q, city, from, to, maxPriceCents, onlyAvailable } = {}) {
@@ -61,7 +81,9 @@ const byTitleThenId = (a, b) =>
 
 const SORTERS = {
   // ISO date strings sort correctly as plain text.
-  date: (a, b) => compareText(a.startsAt, b.startsAt) || byTitleThenId(a, b),
+  date: (a, b) =>
+  compareText(a.startsAt.slice(0, 10), b.startsAt.slice(0, 10)) ||
+  byTitleThenId(a, b),
   // Events with no tiers have no price: put them last.
   price: (a, b) => {
     const priceA = a.minPriceCents ?? Infinity;
