@@ -1,0 +1,10 @@
+{
+  "name": "ticketing-capstone",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Event Ticketing and Booking - course capstone",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  }
+}
