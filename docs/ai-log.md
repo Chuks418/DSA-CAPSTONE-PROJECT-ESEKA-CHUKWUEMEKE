@@ -13,3 +13,17 @@ Every time you give an AI tool a significant prompt, add an entry. Three lines e
 - **What I asked:** Review the domain implementation and tests, improve validation, correct the test coverage, and check the lookup benchmark.
 - **What came back:** Updated validation for organizer and user IDs, safer booking preparation before inventory mutation, corrected booking tests, and benchmark results demonstrating the performance difference between Map lookup and array search.
 - **What was wrong (or "nothing"):** The first attempt to replace the booking test section accidentally removed the file's imports and setup. This caused a `ReferenceError`. The complete test file was restored and corrected. The final test run passed all 46 tests with no failures.
+
+## Build 2 (retrospective record)
+
+### Implementation and review
+- **What I asked:** Implement and review event publishing, unpublishing, event search, filtering, sorting and the associated booking and inventory requirements.
+- **What came back:** Event search and summary functions, a stable merge-sort implementation, publishing and unpublishing functionality, and automated tests covering the Build 2 requirements.
+- **What was wrong (or "nothing"):** Some test coverage and validation needed correction during development. These were addressed, and the final Build 2 test run passed all 49 tests with no failures.
+
+## Build 3
+
+### Prompt 1: Build 3 implementation review and verification
+- **What I asked:** Review the booking state machine, router, HTTP application, server configuration and automated tests against the Build 3 requirements. Explain the implementation and guide me through testing the server.
+- **What came back:** A review of the implementation, identification of the missing `start` script, and guidance for testing the health endpoint, static file serving, unknown API routes and malformed JSON.
+- **What was wrong (or "nothing"):** The `start` script was missing from `package.json`. It was added as `node src/server.js`. No critical implementation defects were identified during the review. Manual HTTP checks succeeded, and the final test suite passed all 59 tests with no failures.
