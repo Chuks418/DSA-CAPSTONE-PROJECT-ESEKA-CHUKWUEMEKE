@@ -27,3 +27,9 @@ Every time you give an AI tool a significant prompt, add an entry. Three lines e
 - **What I asked:** Review the booking state machine, router, HTTP application, server configuration and automated tests against the Build 3 requirements. Explain the implementation and guide me through testing the server.
 - **What came back:** A review of the implementation, identification of the missing `start` script, and guidance for testing the health endpoint, static file serving, unknown API routes and malformed JSON.
 - **What was wrong (or "nothing"):** The `start` script was missing from `package.json`. It was added as `node src/server.js`. No critical implementation defects were identified during the review. Manual HTTP checks succeeded, and the final test suite passed all 59 tests with no failures.
+## Build 4
+
+### Prompt 1: REST API implementation and review
+- **What I asked:** Implement the in-memory REST API for event creation, ticket tiers, publishing, searching, bookings, mock payments and cancellation, following the Build 4 architecture and acceptance criteria.
+- **What came back:** An in-memory repository, event and booking services, mock payment gateway, API routes, server integration, API examples and real HTTP API tests.
+- **What was wrong (or "nothing"):** The initial API test suite did not include an automated test proving that a cancelled booking cannot be paid. This was identified during review, added to the test suite and verified. The final test run passed all 80 tests with no failures.
