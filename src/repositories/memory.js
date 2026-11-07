@@ -1,3 +1,4 @@
+
 export function createMemoryRepository() {
   const events = new Map();
   const tiers = new Map();
@@ -28,7 +29,22 @@ export function createMemoryRepository() {
     },
 
     async listTiersByEventId(eventId) {
-      return [...tiers.values()].filter((tier) => tier.eventId === eventId);
+      return [...tiers.values()].filter(
+        (tier) => tier.eventId === eventId,
+      );
+    },
+
+    async reserveTierSeats(tierId, quantity) {
+      const tier = tiers.get(tierId);
+
+      if (!tier || tier.sold + quantity > tier.capacity) {
+        return null;
+      }
+
+      tier.sold += quantity;
+      tiers.set(tierId, tier);
+
+      return tier;
     },
 
     async saveBooking(booking) {

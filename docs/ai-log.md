@@ -33,3 +33,16 @@ Every time you give an AI tool a significant prompt, add an entry. Three lines e
 - **What I asked:** Implement the in-memory REST API for event creation, ticket tiers, publishing, searching, bookings, mock payments and cancellation, following the Build 4 architecture and acceptance criteria.
 - **What came back:** An in-memory repository, event and booking services, mock payment gateway, API routes, server integration, API examples and real HTTP API tests.
 - **What was wrong (or "nothing"):** The initial API test suite did not include an automated test proving that a cancelled booking cannot be paid. This was identified during review, added to the test suite and verified. The final test run passed all 80 tests with no failures.
+
+## Build 5
+
+### Prompt 1: SQLite persistence and overselling protection
+- **What I asked:** Implement SQLite persistence using Node.js `node:sqlite`, create the database schema and SQLite repository, preserve the existing service architecture, add database seeding, and demonstrate the last-ticket overselling problem with 50 concurrent booking attempts.
+- **What came back:** SQLite schema and connection, SQLite repository, persistent server integration, seed script, and an overselling demonstration using an in-memory database.
+- **What was wrong (or "nothing"):** The original read-then-write reservation approach was vulnerable to a race condition. Fifty concurrent requests could create 50 bookings for one available seat.
+
+### Prompt 2: Atomic overselling fix and regression testing
+- **What I asked:** Fix overselling with an atomic conditional SQLite update, add a regression test for 50 concurrent booking attempts, and verify the before-and-after behaviour.
+- **What came back:** An atomic `UPDATE` statement that reserves seats only when capacity permits, an updated booking service, and a dedicated overselling regression test.
+- **What was wrong (or "nothing"):** The before-fix experiment reproduced 49 oversold tickets. The atomic update corrected the problem: one booking succeeded and 49 requests received `SOLD_OUT`. The final test suite passed all 81 tests with no failures. SQLite persistence was also verified after restarting the server.
+An in-memory lock variable is not a reliable database-level safeguard because separate server processes do not share the same lock state. A second check also does not solve the problem because concurrent requests can pass the check before either request updates the database.

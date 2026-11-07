@@ -1,17 +1,20 @@
 
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { DatabaseSync } from 'node:sqlite';
+import { readFileSync } from 'node:fs';
 
 import { createAppServer } from '../src/http/app.js';
 import { createApiRouter } from '../src/http/routes.js';
-import { createMemoryRepository } from '../src/repositories/memory.js';
+import { createSqliteRepository } from '../src/repositories/sqlite.js';
 import { createEventService } from '../src/services/eventService.js';
 import { createBookingService } from '../src/services/bookingService.js';
 import { createMockPaymentGateway } from '../src/lib/mockPaymentGateway.js';
 
-describe('Build 4 REST API', () => {
+describe('Build 4 REST API with SQLite', () => {
   let server;
   let baseUrl;
+  let db;
 
   async function request(path, {
     method = 'GET',
@@ -21,7 +24,9 @@ describe('Build 4 REST API', () => {
     const headers = {};
 
     if (userId) headers['x-user-id'] = userId;
-    if (body !== undefined) headers['content-type'] = 'application/json';
+    if (body !== undefined) {
+      headers['content-type'] = 'application/json';
+    }
 
     const response = await fetch(`${baseUrl}${path}`, {
       method,
@@ -83,16 +88,43 @@ describe('Build 4 REST API', () => {
   }
 
   before(async () => {
-    const repository = createMemoryRepository();
+    // Create a fresh in-memory SQLite database.
+    db = new DatabaseSync(':memory:');
+
+    // Enable foreign-key enforcement.
+    db.exec('PRAGMA foreign_keys = ON');
+
+    // Load the database schema.
+    const schema = readFileSync(
+      new URL('../src/db/schema.sql', import.meta.url),
+      'utf8',
+    );
+
+    // Create all database tables.
+    db.exec(schema);
+
+    // Create the SQLite repository.
+    const repository = createSqliteRepository(db);
+
     const paymentGateway = createMockPaymentGateway();
 
+    // Connect the existing services to SQLite.
     const eventService = createEventService(repository);
-    const bookingService = createBookingService(repository, paymentGateway);
+    const bookingService = createBookingService(
+      repository,
+      paymentGateway,
+    );
 
-    const router = createApiRouter(eventService, bookingService);
+    // Create the API router.
+    const router = createApiRouter(
+      eventService,
+      bookingService,
+    );
 
+    // Create the HTTP server.
     server = createAppServer({ router });
 
+    // Start on an available port.
     await new Promise((resolve) => {
       server.listen(0, '127.0.0.1', resolve);
     });
@@ -101,6 +133,7 @@ describe('Build 4 REST API', () => {
   });
 
   after(async () => {
+    // Close the HTTP server.
     if (server) {
       await new Promise((resolve, reject) => {
         server.close((error) => {
@@ -108,6 +141,11 @@ describe('Build 4 REST API', () => {
           else resolve();
         });
       });
+    }
+
+    // Close the SQLite database.
+    if (db) {
+      db.close();
     }
   });
 
@@ -270,6 +308,7 @@ describe('Build 4 REST API', () => {
 
     assert.equal(result.status, 200);
     assert.ok(Array.isArray(result.data));
+
     assert.ok(
       result.data.some((event) =>
         event.title.includes('Lagos Technology Conference'),

@@ -1,3 +1,4 @@
+
 import { newId, newReference } from '../domain/ids.js';
 import { DomainError } from '../domain/errors.js';
 import { assertTransition } from '../domain/bookingStateMachine.js';
@@ -39,11 +40,23 @@ export function createBookingService(repository, paymentGateway) {
       }
 
       if (event.status !== 'published') {
-        throw new DomainError('INVALID_STATE', 'Tickets can only be booked for published events');
+        throw new DomainError(
+          'INVALID_STATE',
+          'Tickets can only be booked for published events',
+        );
       }
 
-      if (tier.capacity - tier.sold < quantity) {
-        throw new DomainError('SOLD_OUT', 'Not enough tickets are available');
+      // Reserve seats atomically through the repository.
+      const reservedTier = await repository.reserveTierSeats(
+        tierId,
+        quantity,
+      );
+
+      if (!reservedTier) {
+        throw new DomainError(
+          'SOLD_OUT',
+          'Not enough tickets are available',
+        );
       }
 
       const booking = {
@@ -57,9 +70,6 @@ export function createBookingService(repository, paymentGateway) {
         createdAt: new Date().toISOString(),
       };
 
-      tier.sold += quantity;
-
-      await repository.saveTier(tier);
       await repository.saveBooking(booking);
 
       return booking;
@@ -107,7 +117,10 @@ export function createBookingService(repository, paymentGateway) {
       assertTransition(booking.status, 'cancelled');
 
       if (booking.status !== 'pending') {
-        throw new DomainError('INVALID_STATE', 'Only unpaid bookings can be cancelled');
+        throw new DomainError(
+          'INVALID_STATE',
+          'Only unpaid bookings can be cancelled',
+        );
       }
 
       const tier = await repository.findTierById(booking.tierId);
