@@ -1,0 +1,138 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="Create and manage your events on EventHub."
+    >
+    <title>Organizer Dashboard | EventHub</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <script type="module" src="/js/pages/organizer.js"></script>
+  </head>
+
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="EventHub home">
+        Event<span>Hub</span>
+      </a>
+
+      <nav aria-label="Main navigation">
+        <a href="/">Discover events</a>
+        <a href="/tickets.html">My tickets</a>
+        <button
+          id="logout-button"
+          class="button button-secondary"
+          type="button"
+        >
+          Sign out
+        </button>
+      </nav>
+    </header>
+
+    <main class="container">
+      <section class="hero">
+        <p class="eyebrow">ORGANIZER WORKSPACE</p>
+        <h1>Manage your events.</h1>
+        <p>
+          Create events, set up ticket tiers and manage publication.
+        </p>
+      </section>
+
+      <section class="search-section" aria-labelledby="create-event-heading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">GET STARTED</p>
+            <h2 id="create-event-heading">Create an event</h2>
+          </div>
+        </div>
+
+        <form id="create-event-form" class="filter-panel">
+          <div class="form-group">
+            <label for="event-title">Event title</label>
+            <input
+              id="event-title"
+              name="title"
+              type="text"
+              placeholder="e.g. Benin Tech Summit"
+              required
+            >
+          </div>
+
+          <div class="form-group">
+            <label for="event-city">City</label>
+            <input
+              id="event-city"
+              name="city"
+              type="text"
+              placeholder="e.g. Benin City"
+              required
+            >
+          </div>
+
+          <div class="form-group">
+            <label for="event-venue">Venue</label>
+            <input
+              id="event-venue"
+              name="venue"
+              type="text"
+              placeholder="Event venue"
+              required
+            >
+          </div>
+
+          <div class="form-group">
+            <label for="event-date">Date and time</label>
+            <input
+              id="event-date"
+              name="startsAt"
+              type="datetime-local"
+              required
+            >
+          </div>
+
+          <div
+            id="create-event-message"
+            class="message"
+            role="alert"
+            hidden
+          ></div>
+
+          <button
+            id="create-event-button"
+            class="button button-primary"
+            type="submit"
+          >
+            Create event
+          </button>
+        </form>
+      </section>
+
+      <section
+        class="search-section"
+        aria-labelledby="my-events-heading"
+      >
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">YOUR WORKSPACE</p>
+            <h2 id="my-events-heading">My events</h2>
+          </div>
+        </div>
+
+        <div
+          id="organizer-events-list"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          <p>Loading your events...</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>EventHub &mdash; Discover. Book. Experience.</p>
+    </footer>
+  </body>
+</html>

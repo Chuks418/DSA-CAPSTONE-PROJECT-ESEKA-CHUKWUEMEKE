@@ -1,0 +1,60 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="View and manage your EventHub ticket bookings."
+    >
+    <title>My Tickets | EventHub</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <script type="module" src="/js/pages/tickets.js"></script>
+  </head>
+
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="EventHub home">
+        Event<span>Hub</span>
+      </a>
+
+      <nav aria-label="Main navigation" class="account-nav">
+        <a href="/">Discover events</a>
+        <a href="/tickets.html" aria-current="page">My tickets</a>
+        <button id="logout-button" class="nav-button" type="button">
+          Sign out
+        </button>
+      </nav>
+    </header>
+
+    <main class="container tickets-container">
+      <section class="tickets-heading">
+        <p class="eyebrow">YOUR EVENT BOOKINGS</p>
+        <h1>My tickets</h1>
+        <p>View your reservations and keep track of your event bookings.</p>
+      </section>
+
+      <div
+        id="tickets-message"
+        class="message"
+        role="status"
+        aria-live="polite"
+        hidden
+      ></div>
+
+      <section
+        id="tickets-list"
+        class="tickets-list"
+        aria-label="Your bookings"
+        aria-busy="true"
+      >
+        <p>Loading your tickets...</p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>EventHub &mdash; Discover. Book. Experience.</p>
+    </footer>
+  </body>
+</html>

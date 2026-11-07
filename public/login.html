@@ -1,0 +1,148 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="Sign in or create your EventHub account."
+    >
+    <title>Login | EventHub</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <script type="module" src="/js/pages/login.js"></script>
+  </head>
+
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="EventHub home">
+        Event<span>Hub</span>
+      </a>
+
+      <nav aria-label="Main navigation">
+        <a href="/">Discover events</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <section class="search-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">WELCOME TO EVENTHUB</p>
+            <h1>Your account</h1>
+            <p>Sign in or create an account to continue.</p>
+          </div>
+        </div>
+
+        <div class="filter-actions">
+          <button
+            id="show-login"
+            class="button button-primary"
+            type="button"
+          >
+            Sign in
+          </button>
+
+          <button
+            id="show-signup"
+            class="button button-secondary"
+            type="button"
+          >
+            Create account
+          </button>
+        </div>
+
+        <div id="auth-message" role="alert" hidden></div>
+
+        <section id="login-section">
+          <h2>Sign in</h2>
+
+          <form id="login-form">
+            <div class="form-group">
+              <label for="login-email">Email address</label>
+              <input
+                id="login-email"
+                name="email"
+                type="email"
+                autocomplete="email"
+                required
+              >
+            </div>
+
+            <div class="form-group">
+              <label for="login-password">Password</label>
+              <input
+                id="login-password"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                required
+              >
+            </div>
+
+            <button
+              id="login-button"
+              class="button button-primary"
+              type="submit"
+            >
+              Sign in
+            </button>
+          </form>
+        </section>
+
+        <section id="signup-section" hidden>
+          <h2>Create your account</h2>
+
+          <form id="signup-form">
+            <div class="form-group">
+              <label for="signup-email">Email address</label>
+              <input
+                id="signup-email"
+                name="email"
+                type="email"
+                autocomplete="email"
+                required
+              >
+            </div>
+
+            <div class="form-group">
+              <label for="signup-password">Password</label>
+              <input
+                id="signup-password"
+                name="password"
+                type="password"
+                minlength="8"
+                autocomplete="new-password"
+                required
+              >
+              <p class="form-hint">
+                Your password must contain at least eight characters.
+              </p>
+            </div>
+
+            <div class="form-group">
+              <label for="signup-role">Account type</label>
+              <select id="signup-role" name="role" required>
+                <option value="attendee">Attendee — book tickets</option>
+                <option value="organizer">Organizer — create events</option>
+                <option value="staff">Staff</option>
+              </select>
+            </div>
+
+            <button
+              id="signup-button"
+              class="button button-primary"
+              type="submit"
+            >
+              Create account
+            </button>
+          </form>
+        </section>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>EventHub &mdash; Discover. Book. Experience.</p>
+    </footer>
+  </body>
+</html>

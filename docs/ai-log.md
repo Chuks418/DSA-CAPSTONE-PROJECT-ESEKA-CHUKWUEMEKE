@@ -57,3 +57,15 @@ An in-memory lock variable is not a reliable database-level safeguard because se
 - **What I asked:** Add automated tests for event listing, filtering, sorting, event lookup, booking validation, seat reservation, sold-out protection and payment retry.
 - **What came back:** A new `test/frontend-api.test.js` file with 20 tests covering the frontend mock API.
 - **What was wrong (or "nothing"):** No test failures occurred. The complete project test suite passed all 101 tests across 20 suites, with zero failures.
+
+## Build 7
+
+### Prompt 1: Authentication, authorization and connected frontend
+- **What I asked:** Implement secure signup and login, password hashing, signed JWT authentication, attendee/organizer/staff roles, ownership and booking privacy checks, and connect the frontend to the real API. Add login, my tickets and organizer dashboard pages.
+- **What came back:** SQLite user persistence and migration, password and token utilities, authentication service, authorization guards, protected API routes, a real frontend API client, session management, and the three requested pages.
+- **What was wrong (or "nothing"):** The organizer dashboard initially failed to load because it imported `getCurrentUser` instead of the exported `getUser` function. This was corrected. The existing database was migrated without deleting its data, and the server was restarted with the JWT secret configured.
+
+### Prompt 2: Build 7 security review and end-to-end testing
+- **What I asked:** Verify signup and login, token validation, role restrictions, booking privacy, event ownership, and the complete organizer-to-attendee browser workflow. Add tests for missing, edited and expired tokens.
+- **What came back:** Expanded API and authentication tests covering account creation, login, authorization, booking privacy, organizer ownership and token rejection. Browser testing also confirmed that an organizer could publish an event and an attendee could book and pay successfully.
+- **What was wrong (or "nothing"):** An expired-token test was initially missing at the protected API endpoint. It was added and passed. The final full test suite passed all 142 tests across 23 suites, with zero failures.

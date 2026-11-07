@@ -1,8 +1,19 @@
-import {
-  newId,
-} from '../domain/ids.js';
+
+import { newId } from '../domain/ids.js';
 import { DomainError } from '../domain/errors.js';
 import { searchEvents, summarizeEvent } from '../domain/eventSearch.js';
+
+function verifyEventOwnership(event, organizerId) {
+  if (
+    organizerId !== undefined &&
+    event.organizerId !== organizerId
+  ) {
+    throw new DomainError(
+      'FORBIDDEN',
+      'You do not have permission to manage this event'
+    );
+  }
+}
 
 export function createEventService(repository) {
   if (!repository) {
@@ -27,7 +38,11 @@ export function createEventService(repository) {
         throw new DomainError('VALIDATION', 'Organizer ID is required');
       }
 
-      if (typeof startsAt !== 'string' || !startsAt.trim() || Number.isNaN(Date.parse(startsAt))) {
+      if (
+        typeof startsAt !== 'string' ||
+        !startsAt.trim() ||
+        Number.isNaN(Date.parse(startsAt))
+      ) {
         throw new DomainError('VALIDATION', 'Event date must be valid');
       }
 
@@ -45,23 +60,31 @@ export function createEventService(repository) {
       return event;
     },
 
-    async addTier(eventId, { name, priceCents, capacity }) {
+    async addTier(eventId, { name, priceCents, capacity }, organizerId) {
       const event = await repository.findEventById(eventId);
 
       if (!event) {
         throw new DomainError('NOT_FOUND', 'Event not found');
       }
 
+      verifyEventOwnership(event, organizerId);
+
       if (typeof name !== 'string' || !name.trim()) {
         throw new DomainError('VALIDATION', 'Tier name is required');
       }
 
       if (!Number.isInteger(priceCents) || priceCents < 0) {
-        throw new DomainError('VALIDATION', 'Price must be a whole number of cents');
+        throw new DomainError(
+          'VALIDATION',
+          'Price must be a whole number of cents'
+        );
       }
 
       if (!Number.isInteger(capacity) || capacity < 1) {
-        throw new DomainError('VALIDATION', 'Capacity must be a whole number greater than zero');
+        throw new DomainError(
+          'VALIDATION',
+          'Capacity must be a whole number greater than zero'
+        );
       }
 
       const tier = {
@@ -77,17 +100,22 @@ export function createEventService(repository) {
       return tier;
     },
 
-    async publishEvent(eventId) {
+    async publishEvent(eventId, organizerId) {
       const event = await repository.findEventById(eventId);
 
       if (!event) {
         throw new DomainError('NOT_FOUND', 'Event not found');
       }
 
+      verifyEventOwnership(event, organizerId);
+
       const tiers = await repository.listTiersByEventId(eventId);
 
       if (tiers.length === 0) {
-        throw new DomainError('INVALID_STATE', 'An event needs at least one ticket tier before publishing');
+        throw new DomainError(
+          'INVALID_STATE',
+          'An event needs at least one ticket tier before publishing'
+        );
       }
 
       event.status = 'published';
@@ -95,27 +123,58 @@ export function createEventService(repository) {
       return event;
     },
 
-    async unpublishEvent(eventId) {
+    async unpublishEvent(eventId, organizerId) {
       const event = await repository.findEventById(eventId);
 
       if (!event) {
         throw new DomainError('NOT_FOUND', 'Event not found');
       }
 
+      verifyEventOwnership(event, organizerId);
+
       event.status = 'draft';
       await repository.saveEvent(event);
       return event;
     },
 
+    async getEvent(eventId) {
+      const event = await repository.findEventById(eventId);
+
+      if (!event || event.status !== 'published') {
+        throw new DomainError('NOT_FOUND', 'Event not found');
+      }
+
+      const tiers = await repository.listTiersByEventId(eventId);
+
+      return {
+        ...event,
+        tiers,
+      };
+    },
+
+    async listOrganizerEvents(organizerId) {
+      const events = await repository.listEventsByOrganizerId(organizerId);
+
+      return Promise.all(
+        events.map(async (event) => ({
+          ...event,
+          tiers: await repository.listTiersByEventId(event.id),
+        }))
+      );
+    },
+
     async listEvents(criteria = {}, sortBy = 'date') {
       const events = await repository.listEvents();
-      const publishedEvents = events.filter((event) => event.status === 'published');
+
+      const publishedEvents = events.filter(
+        (event) => event.status === 'published'
+      );
 
       const summaries = await Promise.all(
         publishedEvents.map(async (event) => {
           const tiers = await repository.listTiersByEventId(event.id);
           return summarizeEvent(event, tiers);
-        }),
+        })
       );
 
       return searchEvents(summaries, criteria, sortBy);

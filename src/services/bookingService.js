@@ -7,7 +7,9 @@ const MAX_TICKETS_PER_BOOKING = 10;
 
 export function createBookingService(repository, paymentGateway) {
   if (!repository || !paymentGateway) {
-    throw new TypeError('A booking repository and payment gateway are required');
+    throw new TypeError(
+      'A booking repository and payment gateway are required'
+    );
   }
 
   return {
@@ -23,7 +25,7 @@ export function createBookingService(repository, paymentGateway) {
       ) {
         throw new DomainError(
           'VALIDATION',
-          `Quantity must be a whole number between 1 and ${MAX_TICKETS_PER_BOOKING}`,
+          `Quantity must be a whole number between 1 and ${MAX_TICKETS_PER_BOOKING}`
         );
       }
 
@@ -42,20 +44,19 @@ export function createBookingService(repository, paymentGateway) {
       if (event.status !== 'published') {
         throw new DomainError(
           'INVALID_STATE',
-          'Tickets can only be booked for published events',
+          'Tickets can only be booked for published events'
         );
       }
 
-      // Reserve seats atomically through the repository.
       const reservedTier = await repository.reserveTierSeats(
         tierId,
-        quantity,
+        quantity
       );
 
       if (!reservedTier) {
         throw new DomainError(
           'SOLD_OUT',
-          'Not enough tickets are available',
+          'Not enough tickets are available'
         );
       }
 
@@ -75,6 +76,64 @@ export function createBookingService(repository, paymentGateway) {
       return booking;
     },
 
+    async listBookings(userId) {
+      if (typeof userId !== 'string' || !userId.trim()) {
+        throw new DomainError(
+          'UNAUTHENTICATED',
+          'Authentication is required'
+        );
+      }
+
+      const bookings = await repository.listBookingsByUserId(userId);
+
+      return Promise.all(
+        bookings.map(async (booking) => {
+          const tier = await repository.findTierById(booking.tierId);
+
+          const event = tier
+            ? await repository.findEventById(tier.eventId)
+            : null;
+
+          return {
+            ...booking,
+            tier: tier
+              ? {
+                  id: tier.id,
+                  name: tier.name,
+                  priceCents: tier.priceCents,
+                }
+              : null,
+            event: event
+              ? {
+                  id: event.id,
+                  title: event.title,
+                  city: event.city,
+                  venue: event.venue,
+                  startsAt: event.startsAt,
+                }
+              : null,
+          };
+        })
+      );
+    },
+
+    async getBooking(reference, userId) {
+      const booking = await repository.findBookingByReference(reference);
+
+      if (!booking) {
+        throw new DomainError('NOT_FOUND', 'Booking not found');
+      }
+
+      if (booking.userId !== userId) {
+        throw new DomainError(
+          'FORBIDDEN',
+          'You cannot view another user’s booking'
+        );
+      }
+
+      return booking;
+    },
+
     async payBooking(reference, userId, paymentOutcome = 'success') {
       const booking = await repository.findBookingByReference(reference);
 
@@ -83,7 +142,10 @@ export function createBookingService(repository, paymentGateway) {
       }
 
       if (booking.userId !== userId) {
-        throw new DomainError('FORBIDDEN', 'You cannot pay for another user’s booking');
+        throw new DomainError(
+          'FORBIDDEN',
+          'You cannot pay for another user’s booking'
+        );
       }
 
       assertTransition(booking.status, 'paid');
@@ -111,7 +173,10 @@ export function createBookingService(repository, paymentGateway) {
       }
 
       if (booking.userId !== userId) {
-        throw new DomainError('FORBIDDEN', 'You cannot cancel another user’s booking');
+        throw new DomainError(
+          'FORBIDDEN',
+          'You cannot cancel another user’s booking'
+        );
       }
 
       assertTransition(booking.status, 'cancelled');
@@ -119,7 +184,7 @@ export function createBookingService(repository, paymentGateway) {
       if (booking.status !== 'pending') {
         throw new DomainError(
           'INVALID_STATE',
-          'Only unpaid bookings can be cancelled',
+          'Only unpaid bookings can be cancelled'
         );
       }
 
