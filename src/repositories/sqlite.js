@@ -42,6 +42,18 @@ function mapBooking(row) {
   };
 }
 
+function mapUser(row) {
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    email: row.email,
+    passwordHash: row.password_hash,
+    role: row.role,
+    createdAt: row.created_at,
+  };
+}
+
 export function createSqliteRepository(db) {
   const statements = {
     saveEvent: db.prepare(`
@@ -64,6 +76,10 @@ export function createSqliteRepository(db) {
 
     listEvents: db.prepare(
       'SELECT * FROM events'
+    ),
+
+    listEventsByOrganizerId: db.prepare(
+      'SELECT * FROM events WHERE organizer_id = ?'
     ),
 
     saveTier: db.prepare(`
@@ -123,10 +139,31 @@ export function createSqliteRepository(db) {
       'SELECT * FROM bookings'
     ),
 
+    listBookingsByUserId: db.prepare(
+      'SELECT * FROM bookings WHERE user_id = ? ORDER BY created_at DESC'
+    ),
+
     saveUser: db.prepare(`
       INSERT INTO users (id)
       VALUES (?)
       ON CONFLICT(id) DO NOTHING
+    `),
+
+    createUser: db.prepare(`
+      INSERT INTO users (
+        id, email, password_hash, role, created_at
+      )
+      VALUES (?, ?, ?, ?, ?)
+    `),
+
+    findUserByEmail: db.prepare(`
+      SELECT * FROM users
+      WHERE email = ? COLLATE NOCASE
+    `),
+
+    findUserById: db.prepare(`
+      SELECT * FROM users
+      WHERE id = ?
     `),
   };
 
@@ -155,6 +192,12 @@ export function createSqliteRepository(db) {
 
     async listEvents() {
       return statements.listEvents.all().map(mapEvent);
+    },
+
+    async listEventsByOrganizerId(organizerId) {
+      return statements.listEventsByOrganizerId
+        .all(organizerId)
+        .map(mapEvent);
     },
 
     async saveTier(tier) {
@@ -230,6 +273,36 @@ export function createSqliteRepository(db) {
 
     async listBookings() {
       return statements.listBookings.all().map(mapBooking);
+    },
+
+    async listBookingsByUserId(userId) {
+      return statements.listBookingsByUserId
+        .all(userId)
+        .map(mapBooking);
+    },
+
+    async createUser(user) {
+      statements.createUser.run(
+        user.id,
+        user.email,
+        user.passwordHash,
+        user.role,
+        user.createdAt,
+      );
+
+      return user;
+    },
+
+    async findUserByEmail(email) {
+      return mapUser(
+        statements.findUserByEmail.get(email)
+      );
+    },
+
+    async findUserById(userId) {
+      return mapUser(
+        statements.findUserById.get(userId)
+      );
     },
   };
 }

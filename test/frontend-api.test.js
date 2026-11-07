@@ -7,7 +7,7 @@ import {
   getEvent,
   createBooking,
   pay,
-} from '../public/js/api.js';
+} from '../public/js/mockApi.js';
 
 describe('Build 6 frontend mock API', () => {
   describe('Event listing and filtering', () => {

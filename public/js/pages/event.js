@@ -1,10 +1,11 @@
+
 import {
   getEvent,
   createBooking,
   pay,
-  listEvents,
 } from '../api.js';
 
+import { getToken, getUserRole } from '../session.js';
 import { el } from '../ui.js';
 
 const eventContent = document.querySelector('#event-content');
@@ -27,7 +28,6 @@ const currencyFormatter = new Intl.NumberFormat('en-NG', {
 });
 
 let currentBooking = null;
-let countdownInterval = null;
 
 function formatPrice(priceCents) {
   return currencyFormatter.format(priceCents / 100);
@@ -132,6 +132,24 @@ function createTierCard(tier) {
     submitEvent.preventDefault();
 
     bookingError.hidden = true;
+
+    if (!getToken()) {
+      const returnTo = window.location.pathname + window.location.search;
+
+      window.location.href =
+        `/login.html?returnTo=${encodeURIComponent(returnTo)}`;
+
+      return;
+    }
+
+    if (getUserRole() !== 'attendee') {
+      showBookingError(
+        bookingForm,
+        'Only attendee accounts can book tickets.'
+      );
+      return;
+    }
+
     bookButton.disabled = true;
     bookButton.textContent = 'Reserving...';
 
@@ -167,7 +185,7 @@ function createTierCard(tier) {
       );
     } finally {
       bookButton.disabled = soldOut;
-      bookButton.textContent = 'Book tickets';
+      bookButton.textContent = soldOut ? 'Sold out' : 'Book tickets';
     }
   });
 
@@ -236,50 +254,14 @@ function showCheckout(tier, booking) {
   paymentSuccess.hidden = true;
   paymentForm.reset();
 
+  countdown.textContent = 'Complete payment to confirm your booking.';
+
   checkoutSection.hidden = false;
 
   checkoutSection.scrollIntoView({
     behavior: 'smooth',
     block: 'start',
   });
-
-  startCountdown(booking.expiresAt);
-}
-
-function startCountdown(expiresAt) {
-  if (countdownInterval) {
-    clearInterval(countdownInterval);
-  }
-
-  payButton.disabled = false;
-  payButton.textContent = 'Pay now';
-
-  function updateCountdown() {
-    const remaining = Math.max(0, expiresAt - Date.now());
-
-    const minutes = Math.floor(remaining / 60000);
-    const seconds = Math.floor((remaining % 60000) / 1000);
-
-    countdown.textContent =
-      `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-
-    if (remaining <= 0) {
-      clearInterval(countdownInterval);
-      countdownInterval = null;
-
-      payButton.disabled = true;
-      paymentError.textContent =
-        'Your reservation has expired. Please return to the event and book again.';
-      paymentError.hidden = false;
-
-      // Trigger the mock API's expired-reservation cleanup.
-      listEvents().catch(() => {});
-    }
-  }
-
-  updateCountdown();
-
-  countdownInterval = setInterval(updateCountdown, 1000);
 }
 
 function showPaymentError(message) {
@@ -290,6 +272,7 @@ function showPaymentError(message) {
 
 function showPaymentSuccess(booking) {
   paymentError.hidden = true;
+
   paymentSuccess.replaceChildren(
     el('h3', { text: 'Payment successful' }),
     el('p', {
@@ -297,6 +280,11 @@ function showPaymentSuccess(booking) {
     }),
     el('p', {
       text: 'Your tickets have been confirmed.',
+    }),
+    el('a', {
+      className: 'button button-primary',
+      href: '/tickets.html',
+      text: 'View my tickets',
     })
   );
 
@@ -309,11 +297,6 @@ function showPaymentSuccess(booking) {
   for (const input of cardInputs) {
     input.disabled = true;
   }
-
-  if (countdownInterval) {
-    clearInterval(countdownInterval);
-    countdownInterval = null;
-  }
 }
 
 paymentForm.addEventListener('submit', async (event) => {
@@ -321,15 +304,6 @@ paymentForm.addEventListener('submit', async (event) => {
 
   if (!currentBooking) {
     showPaymentError('No active booking was found. Please book again.');
-    return;
-  }
-
-  if (Date.now() >= currentBooking.expiresAt) {
-    showPaymentError(
-      'Your reservation has expired. Please return to the event and book again.'
-    );
-
-    payButton.disabled = true;
     return;
   }
 
@@ -362,12 +336,8 @@ paymentForm.addEventListener('submit', async (event) => {
       error.message || 'Payment failed. Please try again.'
     );
 
-    if (error.code === 'RESERVATION_EXPIRED') {
-      payButton.disabled = true;
-    } else {
-      payButton.disabled = false;
-      payButton.textContent = 'Retry payment';
-    }
+    payButton.disabled = false;
+    payButton.textContent = 'Retry payment';
   }
 });
 
@@ -381,7 +351,9 @@ async function initializeEventPage() {
     const event = await getEvent(eventId);
     displayEvent(event);
   } catch (error) {
-    showEventError(error.message || 'The requested event could not be found.');
+    showEventError(
+      error.message || 'The requested event could not be found.'
+    );
   }
 }
 
