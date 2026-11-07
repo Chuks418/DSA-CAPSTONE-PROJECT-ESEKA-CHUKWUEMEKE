@@ -46,3 +46,14 @@ Every time you give an AI tool a significant prompt, add an entry. Three lines e
 - **What came back:** An atomic `UPDATE` statement that reserves seats only when capacity permits, an updated booking service, and a dedicated overselling regression test.
 - **What was wrong (or "nothing"):** The before-fix experiment reproduced 49 oversold tickets. The atomic update corrected the problem: one booking succeeded and 49 requests received `SOLD_OUT`. The final test suite passed all 81 tests with no failures. SQLite persistence was also verified after restarting the server.
 An in-memory lock variable is not a reliable database-level safeguard because separate server processes do not share the same lock state. A second check also does not solve the problem because concurrent requests can pass the check before either request updates the database.
+## Build 6
+
+### Prompt 1: Frontend implementation and manual verification
+- **What I asked:** Build a responsive frontend using plain HTML, CSS and JavaScript modules. Implement event browsing, searching, filtering, sorting, event details, ticket selection, checkout countdown and mock payment.
+- **What came back:** A working EventHub frontend with five mock events, ticket-tier selection, reservation handling, a five-minute countdown, and mock payment with retry support.
+- **What was wrong (or "nothing"):** The initial manual filter check returned zero events because the maximum price was set to NGN 2,000, excluding events above that price. Clearing or adjusting the filter restored the expected results. Manual checks confirmed the browsing, filtering, sorting, sold-out protection and payment flows.
+
+### Prompt 2: Frontend mock API automated testing
+- **What I asked:** Add automated tests for event listing, filtering, sorting, event lookup, booking validation, seat reservation, sold-out protection and payment retry.
+- **What came back:** A new `test/frontend-api.test.js` file with 20 tests covering the frontend mock API.
+- **What was wrong (or "nothing"):** No test failures occurred. The complete project test suite passed all 101 tests across 20 suites, with zero failures.

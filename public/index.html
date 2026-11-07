@@ -1,14 +1,118 @@
+
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Event Ticketing</title>
+    <meta
+      name="description"
+      content="Discover events and book your tickets."
+    >
+    <title>Discover Events | Event Ticketing</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <script type="module" src="/js/pages/home.js"></script>
   </head>
+
   <body>
-    <main>
-      <h1>Event Ticketing</h1>
-      <p>The Build 3 server is running.</p>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="Event Ticketing home">
+        Event<span>Hub</span>
+      </a>
+
+      <nav aria-label="Main navigation">
+        <a href="/">Discover events</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <section class="hero">
+        <p class="eyebrow">FIND YOUR NEXT EXPERIENCE</p>
+        <h1>Discover events<br>worth remembering.</h1>
+        <p>
+          Find interesting events, explore your options and reserve
+          your tickets.
+        </p>
+      </section>
+
+      <section class="search-section" aria-labelledby="events-heading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">EXPLORE</p>
+            <h2 id="events-heading">Upcoming events</h2>
+          </div>
+
+          <p id="results-count" class="results-count" aria-live="polite">
+            Loading events...
+          </p>
+        </div>
+
+        <form id="filter-form" class="filter-panel">
+          <div class="form-group search-field">
+            <label for="search-input">Search events</label>
+            <input
+              id="search-input"
+              name="q"
+              type="search"
+              placeholder="Search by event or venue"
+            >
+          </div>
+
+          <div class="form-group">
+            <label for="city-filter">City</label>
+            <select id="city-filter" name="city">
+              <option value="">All cities</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="max-price">Maximum price (&#8358;)</label>
+            <input
+              id="max-price"
+              name="maxPrice"
+              type="number"
+              min="0"
+              step="1"
+              placeholder="Any price"
+            >
+          </div>
+
+          <div class="form-group">
+            <label for="sort-by">Sort by</label>
+            <select id="sort-by" name="sortBy">
+              <option value="date">Date: earliest first</option>
+              <option value="price">Price: lowest first</option>
+              <option value="availability">Most tickets available</option>
+            </select>
+          </div>
+
+          <div class="filter-actions">
+            <button class="button button-primary" type="submit">
+              Apply filters
+            </button>
+
+            <button
+              class="button button-secondary"
+              id="clear-filters"
+              type="reset"
+            >
+              Clear
+            </button>
+          </div>
+        </form>
+
+        <div
+          id="events-list"
+          class="events-grid"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          <p>Loading events...</p>
+        </div>
+      </section>
     </main>
+
+    <footer class="site-footer">
+      <p>EventHub &mdash; Discover. Book. Experience.</p>
+    </footer>
   </body>
 </html>
