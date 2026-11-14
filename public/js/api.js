@@ -172,3 +172,32 @@ export function unpublishEvent(eventId) {
     }
   );
 }
+export function joinWaitlist({ tierId, quantity }) {
+  return apiRequest('/waitlist', {
+    method: 'POST',
+    body: { tierId, quantity },
+  });
+}
+
+export function listWaitlistOffers() {
+  return apiRequest('/waitlist/offers');
+}
+export function listWaitlistEntries() {
+  return apiRequest('/waitlist/entries');
+}
+
+export function acceptWaitlistOffer(offerId) {
+  return apiRequest(
+    `/waitlist/offers/${encodeURIComponent(offerId)}/accept`,
+    {
+      method: 'POST',
+      body: {},
+    },
+  );
+}
+
+export function getRefundPreview(reference) {
+  return apiRequest(
+    `/bookings/${encodeURIComponent(reference)}/refund-preview`,
+  );
+}

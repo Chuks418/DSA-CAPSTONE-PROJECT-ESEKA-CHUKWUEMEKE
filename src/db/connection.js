@@ -10,11 +10,11 @@ const databasePath = join(currentDirectory, '../../data/ticketing.db');
 
 function migrateUsersTable(db) {
   const columns = db.prepare(
-    'PRAGMA table_info(users)',
+    'PRAGMA table_info(users)'
   ).all();
 
   const existingColumns = new Set(
-    columns.map((column) => column.name),
+    columns.map((column) => column.name)
   );
 
   if (!existingColumns.has('email')) {
@@ -44,6 +44,37 @@ function migrateUsersTable(db) {
   `);
 }
 
+function migrateBookingsTable(db) {
+  const columns = db.prepare(
+    'PRAGMA table_info(bookings)'
+  ).all();
+
+  const existingColumns = new Set(
+    columns.map((column) => column.name)
+  );
+
+  if (!existingColumns.has('refund_cents')) {
+    db.exec(`
+      ALTER TABLE bookings
+      ADD COLUMN refund_cents INTEGER NOT NULL DEFAULT 0
+    `);
+  }
+
+  if (!existingColumns.has('refunded_at')) {
+    db.exec(`
+      ALTER TABLE bookings
+      ADD COLUMN refunded_at TEXT
+    `);
+  }
+
+  if (!existingColumns.has('checked_in_at')) {
+    db.exec(`
+      ALTER TABLE bookings
+      ADD COLUMN checked_in_at TEXT
+    `);
+  }
+}
+
 export function createDatabase() {
   mkdirSync(dirname(databasePath), { recursive: true });
 
@@ -59,6 +90,8 @@ export function createDatabase() {
   db.exec(schema);
 
   migrateUsersTable(db);
+
+  migrateBookingsTable(db);
 
   return db;
 }

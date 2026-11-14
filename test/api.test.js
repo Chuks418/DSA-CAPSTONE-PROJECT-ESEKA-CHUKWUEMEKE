@@ -12,6 +12,8 @@ import { createEventService } from '../src/services/eventService.js';
 import { createBookingService } from '../src/services/bookingService.js';
 import { createAuthService } from '../src/services/authService.js';
 import { createMockPaymentGateway } from '../src/lib/mockPaymentGateway.js';
+import { createWaitlistService } from '../src/services/waitlistService.js';
+import { createMaintenanceJob } from '../src/jobs/maintenance.js';
 
 process.env.JWT_SECRET ??=
   'EventHub-Test-Secret-At-Least-32-Characters-Long';
@@ -25,6 +27,7 @@ describe('Build 7 API authentication and authorization', () => {
   let organizerB;
   let attendeeA;
   let attendeeB;
+  let repository;
 
   async function request(path, {
     method = 'GET',
@@ -147,7 +150,7 @@ describe('Build 7 API authentication and authorization', () => {
       WHERE email IS NOT NULL
     `);
 
-    const repository = createSqliteRepository(db);
+    repository = createSqliteRepository(db);
     const paymentGateway = createMockPaymentGateway();
 
     const eventService = createEventService(repository);
@@ -156,12 +159,14 @@ describe('Build 7 API authentication and authorization', () => {
       paymentGateway,
     );
     const authService = createAuthService(repository);
+    const waitlistService = createWaitlistService(repository);
 
     const router = createApiRouter(
       eventService,
       bookingService,
       authService,
       repository,
+      waitlistService,
     );
 
     server = createAppServer({ router });
@@ -639,6 +644,69 @@ describe('Build 7 API authentication and authorization', () => {
   });
 
   // Booking and attendee authorization
+  // Build 8 waitlist
+
+  it('allows an attendee to join a sold-out ticket tier', async () => {
+    const { tier } = await createPublishedEvent({ capacity: 1 });
+
+    const booking = await createBooking(tier.id);
+    assert.equal(booking.status, 201);
+
+    const result = await request('/api/waitlist', {
+      method: 'POST',
+      token: attendeeB.token,
+      body: {
+        tierId: tier.id,
+        quantity: 1,
+      },
+    });
+
+    assert.equal(result.status, 201);
+    assert.equal(result.data.position, 1);
+  });
+
+  it('rejects joining a waitlist when seats are available', async () => {
+    const { tier } = await createPublishedEvent({ capacity: 3 });
+
+    const result = await request('/api/waitlist', {
+      method: 'POST',
+      token: attendeeA.token,
+      body: {
+        tierId: tier.id,
+        quantity: 1,
+      },
+    });
+
+    assert.equal(result.status, 409);
+    assert.equal(result.data.error.code, 'NOT_SOLD_OUT');
+  });
+
+  it('rejects duplicate active waitlist entries', async () => {
+    const { tier } = await createPublishedEvent({ capacity: 1 });
+
+    await createBooking(tier.id);
+
+    const body = {
+      tierId: tier.id,
+      quantity: 1,
+    };
+
+    const first = await request('/api/waitlist', {
+      method: 'POST',
+      token: attendeeA.token,
+      body,
+    });
+
+    const second = await request('/api/waitlist', {
+      method: 'POST',
+      token: attendeeA.token,
+      body,
+    });
+
+    assert.equal(first.status, 201);
+    assert.equal(second.status, 409);
+    assert.equal(second.data.error.code, 'ALREADY_ON_WAITLIST');
+  });
 
   it('creates a pending booking and reduces available seats', async () => {
     const { tier } = await createPublishedEvent();
@@ -882,7 +950,7 @@ describe('Build 7 API authentication and authorization', () => {
     assert.equal(result.data.error.code, 'INVALID_TRANSITION');
   });
 
-  it('does not allow a paid booking to be cancelled', async () => {
+  it('previews the refund for a paid booking', async () => {
     const { tier } = await createPublishedEvent();
     const booking = await createBooking(tier.id);
 
@@ -893,6 +961,28 @@ describe('Build 7 API authentication and authorization', () => {
     });
 
     const result = await request(
+      `/api/bookings/${booking.data.reference}/refund-preview`,
+      {
+        token: attendeeA.token,
+      },
+    );
+
+    assert.equal(result.status, 200);
+    assert.equal(result.data.percentage, 100);
+    assert.equal(result.data.refundCents, booking.data.amountCents);
+  });
+
+      it('cancels a paid booking, refunds it, and releases seats only once', async () => {
+    const { tier } = await createPublishedEvent({ capacity: 3 });
+    const booking = await createBooking(tier.id);
+
+    await request(`/api/bookings/${booking.data.reference}/pay`, {
+      method: 'POST',
+      token: attendeeA.token,
+      body: { outcome: 'success' },
+    });
+
+    const firstCancellation = await request(
       `/api/bookings/${booking.data.reference}/cancel`,
       {
         method: 'POST',
@@ -900,6 +990,189 @@ describe('Build 7 API authentication and authorization', () => {
       },
     );
 
+    assert.equal(firstCancellation.status, 200);
+    assert.equal(firstCancellation.data.status, 'refunded');
+    assert.equal(firstCancellation.data.refundCents, booking.data.amountCents);
+
+    const secondCancellation = await request(
+      `/api/bookings/${booking.data.reference}/cancel`,
+      {
+        method: 'POST',
+        token: attendeeA.token,
+      },
+    );
+
+    assert.equal(secondCancellation.status, 409);
+
+    const inventory = db.prepare(
+      'SELECT sold FROM ticket_tiers WHERE id = ?'
+    ).get(tier.id);
+
+       assert.equal(inventory.sold, 0);
+  });
+    // Build 8 waitlist offer acceptance
+
+  it('offers freed seats to waitlisted attendees in FIFO order', async () => {
+    const { tier } = await createPublishedEvent({ capacity: 1 });
+
+    const booking = await createBooking(tier.id, attendeeA.token);
+    assert.equal(booking.status, 201);
+
+    const first = await request('/api/waitlist', {
+      method: 'POST',
+      token: attendeeA.token,
+      body: { tierId: tier.id, quantity: 1 },
+    });
+
+    const second = await request('/api/waitlist', {
+      method: 'POST',
+      token: attendeeB.token,
+      body: { tierId: tier.id, quantity: 1 },
+    });
+
+    assert.equal(first.status, 201);
+    assert.equal(second.status, 201);
+    assert.equal(first.data.position, 1);
+    assert.equal(second.data.position, 2);
+
+    await request(`/api/bookings/${booking.data.reference}/cancel`, {
+      method: 'POST',
+      token: attendeeA.token,
+    });
+
+    const now = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+    const offer = await repository.createNextWaitlistOffer(
+      tier.id,
+      'offer-fifo-test',
+      now,
+      expiresAt,
+    );
+
+    assert.ok(offer);
+    assert.equal(offer.userId, attendeeA.user.id);
+  });
+
+  it('accepts a valid waitlist offer and creates a pending booking', async () => {
+    const { tier } = await createPublishedEvent({ capacity: 1 });
+
+    const original = await createBooking(tier.id, attendeeA.token);
+    assert.equal(original.status, 201);
+
+    await request('/api/waitlist', {
+      method: 'POST',
+      token: attendeeB.token,
+      body: { tierId: tier.id, quantity: 1 },
+    });
+
+    await request(`/api/bookings/${original.data.reference}/cancel`, {
+      method: 'POST',
+      token: attendeeA.token,
+    });
+
+    const now = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+    const offer = await repository.createNextWaitlistOffer(
+      tier.id,
+      'offer-accept-test',
+      now,
+      expiresAt,
+    );
+
+    const result = await request(
+      `/api/waitlist/offers/${offer.id}/accept`,
+      {
+        method: 'POST',
+        token: attendeeB.token,
+      },
+    );
+
+    assert.equal(result.status, 201);
+    assert.equal(result.data.status, 'pending');
+    assert.equal(result.data.userId, attendeeB.user.id);
+    assert.equal(result.data.tierId, tier.id);
+    assert.equal(result.data.quantity, 1);
+    assert.ok(result.data.reference);
+  });
+
+  it('rejects acceptance of an expired waitlist offer', async () => {
+    const { tier } = await createPublishedEvent({ capacity: 1 });
+
+    const original = await createBooking(tier.id, attendeeA.token);
+
+    await request('/api/waitlist', {
+      method: 'POST',
+      token: attendeeB.token,
+      body: { tierId: tier.id, quantity: 1 },
+    });
+
+    await request(`/api/bookings/${original.data.reference}/cancel`, {
+      method: 'POST',
+      token: attendeeA.token,
+    });
+
+    const now = new Date().toISOString();
+    const expiresAt = new Date(Date.now() - 60 * 1000).toISOString();
+
+    const offer = await repository.createNextWaitlistOffer(
+      tier.id,
+      'offer-expired-test',
+      new Date(Date.now() - 11 * 60 * 1000).toISOString(),
+      expiresAt,
+    );
+
+    const result = await request(
+      `/api/waitlist/offers/${offer.id}/accept`,
+      {
+        method: 'POST',
+        token: attendeeB.token,
+      },
+    );
+
     assert.equal(result.status, 409);
+    assert.equal(result.data.error.code, 'OFFER_EXPIRED');
+
+    const inventory = db.prepare(
+      'SELECT sold FROM ticket_tiers WHERE id = ?',
+    ).get(tier.id);
+
+    assert.equal(inventory.sold, 1);
+  });
+
+  it('rejects an attendee from accepting another attendee offer', async () => {
+    const { tier } = await createPublishedEvent({ capacity: 1 });
+
+    const original = await createBooking(tier.id, attendeeA.token);
+
+    await request('/api/waitlist', {
+      method: 'POST',
+      token: attendeeA.token,
+      body: { tierId: tier.id, quantity: 1 },
+    });
+
+    await request(`/api/bookings/${original.data.reference}/cancel`, {
+      method: 'POST',
+      token: attendeeA.token,
+    });
+
+    const offer = await repository.createNextWaitlistOffer(
+      tier.id,
+      'offer-owner-test',
+      new Date().toISOString(),
+      new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+    );
+
+    const result = await request(
+      `/api/waitlist/offers/${offer.id}/accept`,
+      {
+        method: 'POST',
+        token: attendeeB.token,
+      },
+    );
+
+    assert.equal(result.status, 404);
+    assert.equal(result.data.error.code, 'NOT_FOUND');
   });
 });

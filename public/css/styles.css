@@ -673,7 +673,7 @@ select:focus-visible {
   .form-row {
     grid-template-columns: 1fr;
   }
-
+}
 /* Account navigation */
 
 .account-nav {

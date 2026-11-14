@@ -1,5 +1,7 @@
+
 import { listEvents } from '../api.js';
 import { el } from '../ui.js';
+import { getToken, getUserRole, logout } from '../session.js';
 
 const eventsList = document.querySelector('#events-list');
 const resultsCount = document.querySelector('#results-count');
@@ -28,6 +30,65 @@ function formatDate(dateValue) {
     month: 'short',
     year: 'numeric',
   });
+}
+
+function renderAccountNavigation() {
+  const nav = document.querySelector(
+    'nav[aria-label="Main navigation"]'
+  );
+
+  if (!nav) return;
+
+  // Prevent duplicate account links.
+  nav.querySelectorAll('[data-account-navigation]').forEach((item) => {
+    item.remove();
+  });
+
+  if (!getToken()) {
+    const loginLink = el('a', {
+      href: '/login.html',
+      text: 'Login / Sign up',
+    });
+
+    loginLink.dataset.accountNavigation = 'true';
+    nav.appendChild(loginLink);
+    return;
+  }
+
+  const role = getUserRole();
+
+  if (role === 'attendee') {
+    const ticketsLink = el('a', {
+      href: '/tickets.html',
+      text: 'My Tickets',
+    });
+
+    ticketsLink.dataset.accountNavigation = 'true';
+    nav.appendChild(ticketsLink);
+  }
+
+  if (role === 'organizer') {
+    const dashboardLink = el('a', {
+      href: '/organizer.html',
+      text: 'Organizer Dashboard',
+    });
+
+    dashboardLink.dataset.accountNavigation = 'true';
+    nav.appendChild(dashboardLink);
+  }
+
+  const logoutButton = document.createElement('button');
+
+  logoutButton.type = 'button';
+  logoutButton.className = 'button button-secondary';
+  logoutButton.textContent = 'Log out';
+  logoutButton.dataset.accountNavigation = 'true';
+
+  logoutButton.addEventListener('click', () => {
+    logout();
+  });
+
+  nav.appendChild(logoutButton);
 }
 
 function populateCityFilter(events) {
@@ -85,17 +146,14 @@ function createEventCard(event) {
     }),
   ]);
 
-  const link = el(
-    'a',
-    {
-      className: 'button button-primary event-link',
-      href: `/event.html?id=${encodeURIComponent(event.id)}`,
-      text: 'View event',
-      attrs: {
-        'aria-label': `View ${event.title}`,
-      },
-    }
-  );
+  const link = el('a', {
+    className: 'button button-primary event-link',
+    href: `/event.html?id=${encodeURIComponent(event.id)}`,
+    text: 'View event',
+    attrs: {
+      'aria-label': `View ${event.title}`,
+    },
+  });
 
   return el('article', { className: 'event-card' }, [
     details,
@@ -198,5 +256,8 @@ clearFiltersButton.addEventListener('click', () => {
   filterForm.reset();
   loadEvents({ sortBy: 'date' });
 });
+
+// Render the correct account links without changing the saved session.
+renderAccountNavigation();
 
 initializeHomePage();
