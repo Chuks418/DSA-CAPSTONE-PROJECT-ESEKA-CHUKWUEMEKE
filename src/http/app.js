@@ -29,15 +29,23 @@ const STATUS_BY_ERROR_CODE = {
   VALIDATION: 400,
   INVALID_JSON: 400,
   INVALID_PATH: 400,
+
   NOT_FOUND: 404,
+
   FORBIDDEN: 403,
+
+  UNAUTHENTICATED: 401,
+  INVALID_CREDENTIALS: 401,
+
   SOLD_OUT: 409,
+  NOT_SOLD_OUT: 409,
+  ALREADY_ON_WAITLIST: 409,
+  OFFER_EXPIRED: 409,
+  EMAIL_TAKEN: 409,
   INVALID_STATE: 409,
   INVALID_TRANSITION: 409,
+
   PAYMENT_DECLINED: 402,
-  UNAUTHENTICATED: 401,
-INVALID_CREDENTIALS: 401,
-EMAIL_TAKEN: 409,
 };
 
 function sendJson(response, status, body) {
@@ -235,7 +243,9 @@ export function createAppServer({
           'Route not found',
         );
       }
-    } catch (error) {
+        } catch (error) {
+      console.error('Request failed:', error);
+
       if (response.headersSent) {
         response.destroy(error);
         return;

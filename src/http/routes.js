@@ -15,10 +15,56 @@ export function createApiRouter(
   eventService,
   bookingService,
   authService,
-  repository
+  repository,
+  waitlistService,
 ) {
   const router = new Router();
 
+    router.post('/api/waitlist', async ({ request, body }) => {
+  const user = await requireUser(request, repository);
+  requireRole(user, 'attendee');
+
+  const result = await waitlistService.join({
+    ...requireBody(body),
+    userId: user.id,
+  });
+
+  return { status: 201, body: result };
+});
+
+router.get('/api/waitlist/offers', async ({ request }) => {
+  const user = await requireUser(request, repository);
+  requireRole(user, 'attendee');
+
+  const offers = await waitlistService.listActiveOffers({
+    userId: user.id,
+  });
+
+  return { status: 200, body: offers };
+});
+
+  router.get('/api/waitlist/entries', async ({ request }) => {
+    const user = await requireUser(request, repository);
+    requireRole(user, 'attendee');
+
+    const entries = await waitlistService.listEntries({
+      userId: user.id,
+    });
+
+    return { status: 200, body: entries };
+  });
+
+  router.post('/api/waitlist/offers/:offerId/accept', async ({ request, params }) => {
+    const user = await requireUser(request, repository);
+    requireRole(user, 'attendee');
+
+    const booking = await waitlistService.accept({
+      offerId: params.offerId,
+      userId: user.id,
+    });
+
+    return { status: 201, body: booking };
+  });
   // Authentication
   router.post('/api/auth/signup', async ({ body }) => {
     const result = await authService.signup(requireBody(body));
@@ -189,6 +235,18 @@ export function createApiRouter(
     );
 
     return { status: 200, body: booking };
+  });
+
+    router.get('/api/bookings/:reference/refund-preview', async ({ request, params }) => {
+    const user = await requireUser(request, repository);
+    requireRole(user, 'attendee');
+
+    const preview = await bookingService.getRefundPreview(
+      params.reference,
+      user.id
+    );
+
+    return { status: 200, body: preview };
   });
 
   router.post('/api/bookings/:reference/cancel', async ({ request, params }) => {

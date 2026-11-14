@@ -69,3 +69,17 @@ An in-memory lock variable is not a reliable database-level safeguard because se
 - **What I asked:** Verify signup and login, token validation, role restrictions, booking privacy, event ownership, and the complete organizer-to-attendee browser workflow. Add tests for missing, edited and expired tokens.
 - **What came back:** Expanded API and authentication tests covering account creation, login, authorization, booking privacy, organizer ownership and token rejection. Browser testing also confirmed that an organizer could publish an event and an attendee could book and pay successfully.
 - **What was wrong (or "nothing"):** An expired-token test was initially missing at the protected API endpoint. It was added and passed. The final full test suite passed all 142 tests across 23 suites, with zero failures.
+
+## Build 8
+
+### Prompt 1: Refunds, waitlist, booking expiry and maintenance
+
+- **What I asked:** Implement time-based refund calculations, paid booking cancellation, FIFO waitlist offers, offer expiry, unpaid booking expiry, controllable time and automated tests.
+- **What came back:** Refund policy and clock modules, booking cancellation and refund handling, SQLite waitlist persistence, maintenance jobs, API routes, frontend updates and automated tests.
+- **What was wrong (or "nothing"):** During review, a filename capitalization mismatch was identified between the waitlist service and its imports. It was corrected. The final test run passed all 159 tests across 25 suites, with zero failures.
+
+### Prompt 2: Build 8 verification and debugging review
+
+- **What I asked:** Review the Build 8 changes, verify the waitlist service imports, check the working tree and run the complete test suite.
+- **What came back:** The filename mismatch was corrected, and the project passed its full automated test suite.
+- **What was wrong (or "nothing"):** Windows' case-insensitive filesystem could conceal the filename mismatch. The issue was documented in `docs/build-8-debugging.md` as a cross-platform compatibility risk. No actual Linux deployment failure was claimed.

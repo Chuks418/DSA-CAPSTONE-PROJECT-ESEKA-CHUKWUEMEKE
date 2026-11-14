@@ -3,6 +3,7 @@ import {
   getEvent,
   createBooking,
   pay,
+  joinWaitlist,
 } from '../api.js';
 
 import { getToken, getUserRole } from '../session.js';
@@ -72,7 +73,7 @@ function showBookingError(container, message) {
 function createTierCard(tier) {
   const seatsLeft = Math.max(0, tier.capacity - tier.sold);
   const soldOut = seatsLeft === 0;
-  const maximumQuantity = Math.min(10, seatsLeft);
+  const maximumQuantity = soldOut ? 10 : Math.min(10, seatsLeft);
 
   const quantityInput = el('input', {
     id: `quantity-${tier.id}`,
@@ -82,7 +83,6 @@ function createTierCard(tier) {
     max: String(maximumQuantity),
     value: '1',
     required: true,
-    disabled: soldOut,
     attrs: {
       inputmode: 'numeric',
     },
@@ -117,6 +117,14 @@ function createTierCard(tier) {
     text: soldOut ? 'Sold out' : 'Book tickets',
   });
 
+  // Waitlist button belongs inside this tier card.
+  const waitlistButton = el('button', {
+    className: 'button button-secondary',
+    type: 'button',
+    text: 'Join waitlist',
+    hidden: !soldOut,
+  });
+
   const bookingForm = el('form', {
     className: 'tier-booking-form',
   }, [
@@ -126,7 +134,51 @@ function createTierCard(tier) {
     ]),
     bookingError,
     bookButton,
+    waitlistButton,
   ]);
+
+  waitlistButton.addEventListener('click', async () => {
+    bookingError.hidden = true;
+
+    if (!getToken() || getUserRole() !== 'attendee') {
+      showBookingError(
+        bookingForm,
+        'Please log in as an attendee to join the waitlist.'
+      );
+
+      return;
+    }
+
+    const quantity = Number(quantityInput.value);
+
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10) {
+      showBookingError(
+        bookingForm,
+        'Choose between 1 and 10 tickets.'
+      );
+
+      return;
+    }
+
+    waitlistButton.disabled = true;
+
+    try {
+      const result = await joinWaitlist({
+        tierId: tier.id,
+        quantity,
+      });
+
+      waitlistButton.textContent =
+        `Joined waitlist - position ${result.position}`;
+    } catch (error) {
+      showBookingError(
+        bookingForm,
+        error.message || 'Unable to join the waitlist.'
+      );
+
+      waitlistButton.disabled = false;
+    }
+  });
 
   bookingForm.addEventListener('submit', async (submitEvent) => {
     submitEvent.preventDefault();
@@ -134,7 +186,8 @@ function createTierCard(tier) {
     bookingError.hidden = true;
 
     if (!getToken()) {
-      const returnTo = window.location.pathname + window.location.search;
+      const returnTo =
+        window.location.pathname + window.location.search;
 
       window.location.href =
         `/login.html?returnTo=${encodeURIComponent(returnTo)}`;
@@ -147,11 +200,9 @@ function createTierCard(tier) {
         bookingForm,
         'Only attendee accounts can book tickets.'
       );
+
       return;
     }
-
-    bookButton.disabled = true;
-    bookButton.textContent = 'Reserving...';
 
     const quantity = Number(quantityInput.value);
 
@@ -165,10 +216,11 @@ function createTierCard(tier) {
         `Choose between 1 and ${maximumQuantity} tickets.`
       );
 
-      bookButton.disabled = false;
-      bookButton.textContent = 'Book tickets';
       return;
     }
+
+    bookButton.disabled = true;
+    bookButton.textContent = 'Reserving...';
 
     try {
       const booking = await createBooking({
@@ -254,7 +306,8 @@ function showCheckout(tier, booking) {
   paymentSuccess.hidden = true;
   paymentForm.reset();
 
-  countdown.textContent = 'Complete payment to confirm your booking.';
+  countdown.textContent =
+    'Complete payment to confirm your booking.';
 
   checkoutSection.hidden = false;
 
@@ -303,7 +356,10 @@ paymentForm.addEventListener('submit', async (event) => {
   event.preventDefault();
 
   if (!currentBooking) {
-    showPaymentError('No active booking was found. Please book again.');
+    showPaymentError(
+      'No active booking was found. Please book again.'
+    );
+
     return;
   }
 
@@ -343,7 +399,10 @@ paymentForm.addEventListener('submit', async (event) => {
 
 async function initializeEventPage() {
   if (!eventId) {
-    showEventError('No event was selected. Please choose an event first.');
+    showEventError(
+      'No event was selected. Please choose an event first.'
+    );
+
     return;
   }
 
